@@ -1,0 +1,11 @@
+WIDTH_WINDOW = 1200
+HIGH_WINDOW = 608
+WIDTH_PLAYER = 50
+HIGH_PLAYER = 100
+COLOR_PLAYER = (25, 50, 20)
+COLOR_FONDO = (20, 20, 20)                
+FPS = 60                                 
+VELOCIDAD = 7    
+GUN_PATH = "assets/weapons/gun.png"                        
+BULLET_PATH = "assets/weapons/bullet.png" 
+VELOCIDAD_BULLET = 15
