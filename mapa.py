@@ -73,10 +73,12 @@ class MapaTiled:
 
     def definir_colisiones(self):
         self.colisiones = []
+        #Lista de tiles transitables
+        tiles_transitables = [37,38,39]
         for fila in range(self.mapa_alto):
             for columna in range(self.mapa_ancho):
                 tile_id = self.datos_mapa[fila][columna]
-                if tile_id != 0:
+                if tile_id != 0 and tile_id not in tiles_transitables:
                     rect = pygame.Rect(
                         columna * self.tile_size,
                         fila * self.tile_size,
@@ -89,4 +91,4 @@ class MapaTiled:
         for tile_rect in self.colisiones:
             if rect_jugador.colliderect(tile_rect):
                 return True
-            return False
+        return False

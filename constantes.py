@@ -9,3 +9,5 @@ VELOCIDAD = 7
 GUN_PATH = "assets/weapons/gun.png"                        
 BULLET_PATH = "assets/weapons/bullet.png" 
 VELOCIDAD_BULLET = 15
+VIDAS_MAXIMAS = 5
+TIEMPO_INVENCIBLE = 3000      #3 Segundos

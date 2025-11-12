@@ -3,7 +3,7 @@ import constantes as ks
 from players import Player
 from enemy import Enemy
 from weapons import Weapon, Bullet
-from mapa import MapaTiled             #######
+from mapa import MapaTiled           
 import random
 
 pygame.init()
@@ -11,7 +11,7 @@ pygame.mixer.init()
 
 window = pygame.display.set_mode((ks.WIDTH_WINDOW, ks.HIGH_WINDOW))
 
-# Crear el mapa #######
+# Crear el mapa #
 mapa = MapaTiled(
     "assets/tiles/escenario2.tmx",         #archivo_tmx
     "assets/tiles/Dungeon_Tileset.tsx",   #archivo_tsx
@@ -22,11 +22,13 @@ mapa = MapaTiled(
 pygame.display.set_caption("Primer videojuego")
 
 font = pygame.font.SysFont(None, 36)
+font_peque = pygame.font.SysFont(None, 28)
 
 sound_shoot = pygame.mixer.Sound("assets/sounds/shoot.mp3")
 sound_explosion = pygame.mixer.Sound("assets/sounds/explosion.mp3")
 sound_victory = pygame.mixer.Sound("assets/sounds/victory.mp3")
-
+sound_derrota = pygame.mixer.Sound("assets/sounds/victory.mp3")
+sound_damage = pygame.mixer.Sound("assets/sounds/Damage Grunt (Male).wav")  
 
 Player_1 = Player(x=400, y=300)
 Gun = Weapon()
@@ -64,8 +66,14 @@ total_eliminados = 0
 max_en_pantalla = 4
 total_para_victoria = 10
 victoria = False
+derrota = False
 
-# Función para crear enemigo (igual)
+###SISTEMA DE VIDAS ###
+vidas = ks.VIDAS_MAXIMAS
+invencible = False
+tiempo_invencible = 0
+
+# Función para crear enemigo
 def crear_enemigo():
     cuadrante = random.choice(["TL", "TR", "BL", "BR"])
     pad = 40
@@ -88,26 +96,35 @@ run = True
 
 while run:
     reloj.tick(ks.FPS)
+    
+    ahora = pygame.time.get_ticks()
+    if invencible and ahora > tiempo_invencible:
+        invencible = False
 
     delta_x = 0
     delta_y = 0
 
-    if mover_arriba:
-        delta_y = -ks.VELOCIDAD
-    if mover_abajo:
-        delta_y = ks.VELOCIDAD
-    if mover_derecha:
-        delta_x = ks.VELOCIDAD
-    if mover_izquierda:
-        delta_x = -ks.VELOCIDAD
+    if not victoria and not derrota:  
+        if mover_arriba:
+            delta_y = -ks.VELOCIDAD
+        if mover_abajo:
+            delta_y = ks.VELOCIDAD
+        if mover_derecha:
+            delta_x = ks.VELOCIDAD
+        if mover_izquierda:
+            delta_x = -ks.VELOCIDAD
 
    
     Player_1.movimiento_con_colisiones(delta_x, delta_y, mapa)
     
-    window.fill(ks.COLOR_FONDO)  ######
-    mapa.dibujar(window)         ###### 
+    window.fill(ks.COLOR_FONDO)  
+    mapa.dibujar(window)          
 
-    Player_1.dibujar(interfaz=window)
+    #Dibujar jugador solo si nohay derrota ni victoria
+    if not victoria and not derrota:
+        # Parpadeo durante invencibilidad
+        if not invencible or (ahora//100) %2 == 0:
+            Player_1.dibujar(interfaz=window)
 
     Gun.update(Player_1)
     Gun.dibujar(window)
@@ -116,21 +133,43 @@ while run:
     for e in enemies:
         e.dibujar(superficie=window)
 
-    
+    ### DETECCION DE COLISION CON ENEMIGOS ###
+    if not victoria and not derrota and not invencible:
+        for e in enemies:
+            if Player_1.rect.colliderect(e.rect):
+                vidas -= 1
+                sound_damage.play()
+                invencible = True
+                tiempo_invencible = ahora + ks.TIEMPO_INVENCIBLE
+
+                #Verificar derrota
+                if vidas <= 0:
+                    derrota = True
+                break
+
+
     #### Dibujar balas  ####
     for bullet in balas[:]:        
-        bullet.update()            
+        bullet.update()
+
+        if mapa.verificar_colision(bullet.rect):
+            try:
+                balas.remove(bullet)
+                continue 
+            except ValueError:
+                pass
+
         bullet.dibujar(window)
         for e in enemies[:]:
             if bullet.rect.colliderect(e.rect):
-                try:     ###      
-                    sound_explosion.play()     #aaa         
+                try:       
+                    sound_explosion.play()           
                     balas.remove(bullet)
                     enemies.remove(e)
-                    score += 100    ###
-                    total_eliminados += 1      #aaa
-                except ValueError:  ###
-                    pass            ###
+                    score += 100  
+                    total_eliminados += 1 
+                except ValueError:  
+                    pass   
                 break
 
     # Mantener 4 enemigos activos hasta que se hayan eliminado 5
@@ -153,34 +192,82 @@ while run:
     #### HUD: puntuación y enemigos restantes ####
     texto_score = font.render(f"Puntuación: {score}", True, (255, 255, 0))
     texto_enemigos = font.render(f"Enemigos restantes: {len(enemies)}", True, (255, 0, 255))
-    texto_kills = font.render(f"Eliminados: {total_eliminados}/{total_para_victoria}", True, (255, 255, 255))  #aaa
-    window.blit(texto_score, (10, 10))      #
-    window.blit(texto_enemigos, (10, 40))   #
-    window.blit(texto_kills, (10, 70))              #aaa
+    texto_kills = font.render(f"Eliminados: {total_eliminados}/{total_para_victoria}", True, (255, 255, 255))
+    texto_vidas = font.render(f"Vidas: {vidas}", True, (0,255,255) if vidas > 1 else (255,0,0))
+
+    window.blit(texto_score, (10, 10))      
+    window.blit(texto_enemigos, (10, 40))   
+    window.blit(texto_kills, (10, 70))             
+    window.blit(texto_vidas, (10, 100))
+
+    # Indicador de Invencibilidad
+    if invencible:
+        texto_inv = font_peque.render("PELIGRO",True, (255,0,0))
+        window.blit(texto_inv, (ks.WIDTH_WINDOW//2 - 250, ks.HIGH_WINDOW//2))
+
 
     # Comprobación de victoria
     if victoria:
         texto_victoria = font.render("¡VICTORIA! Todos los enemigos eliminados.", True, (255, 255, 0))
+        texto_final_score = font.render(f"Puntuación final: {score}", True, (0,0,255))
         window.blit(texto_victoria, (ks.WIDTH_WINDOW // 2 - 250, ks.HIGH_WINDOW // 2))
-    #############
+        window.blit(texto_final_score, (ks.WIDTH_WINDOW // 2 - 120, ks.HIGH_WINDOW // 2 + 40))
+
+    if derrota:
+        texto_derrota = font.render("HAS SIDO ELIMINADO", True, (255, 0, 0))
+        texto_final_score = font.render(f"Puntuación final: {score}", True, (0,0,255))
+        window.blit(texto_derrota, (ks.WIDTH_WINDOW // 2 - 250, ks.HIGH_WINDOW // 2))
+        window.blit(texto_final_score, (ks.WIDTH_WINDOW // 2 - 120, ks.HIGH_WINDOW // 2 + 40))
+        texto_reiniciar = font_peque.render("Presiona R para reiniciar", True, (125,125,125))
+        window.blit(texto_reiniciar, (ks.WIDTH_WINDOW // 2 - 250, ks.HIGH_WINDOW // 2 + 80))
 
        
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
 
-        if event.type == pygame.KEYDOWN:     
-            if event.key == pygame.K_a:      
-                mover_izquierda = True       
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r and (victoria or derrota):
+                #Reiniciar todas las variables
+                vidas = ks.VIDAS_MAXIMAS
+                score = 0
+                total_eliminados = 0
+                victoria = False
+                derrota = False
+                enemies.clear()
+                balas.clear()
 
-            if event.key == pygame.K_d:      
-                mover_derecha = True         
+                e1 = Enemy(x=pad, y=pad, patrol_x_range=(pad, half_w - pad), patrol_y_range=(pad, half_h - pad), mode_interval=4000, mode_offset=0)
+                enemies.append(e1)
 
-            if event.key == pygame.K_w:     
-                mover_arriba = True          
+                e2 = Enemy(x=ks.WIDTH_WINDOW - pad, y=pad, patrol_x_range=(half_w + pad, ks.WIDTH_WINDOW - pad), patrol_y_range=(pad, half_h - pad), mode_interval=4000, mode_offset=600)
+                enemies.append(e2)
 
-            if event.key == pygame.K_s:      
-                mover_abajo = True  
+                e3 = Enemy(x=pad, y=ks.HIGH_WINDOW - pad, patrol_x_range=(pad, half_w - pad), patrol_y_range=(half_h + pad, ks.HIGH_WINDOW - pad), mode_interval=4000, mode_offset=1200)
+                enemies.append(e3)
+
+                e4 = Enemy(x=ks.WIDTH_WINDOW - pad, y=ks.HIGH_WINDOW - pad, patrol_x_range=(half_w + pad, ks.WIDTH_WINDOW - pad), patrol_y_range=(half_h + pad, ks.HIGH_WINDOW - pad), mode_interval=4000, mode_offset=1800)
+                enemies.append(e4)
+
+                #Reposicionar al jugador
+                Player_1.rect.center = (400, 300)
+
+                #Enemigos extra
+                for i in range(10):
+                    enemies.append(crear_enemigo())
+
+            if not (victoria or derrota):
+                if event.key == pygame.K_a:      
+                    mover_izquierda = True       
+
+                if event.key == pygame.K_d:      
+                    mover_derecha = True         
+
+                if event.key == pygame.K_w:     
+                    mover_arriba = True          
+
+                if event.key == pygame.K_s:      
+                    mover_abajo = True  
 
         if event.type == pygame.KEYUP:     
             if event.key == pygame.K_a:      
@@ -195,15 +282,17 @@ while run:
             if event.key == pygame.K_s:      
                 mover_abajo = False
                 
+                
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            bullet = Bullet(
-                Gun.forma.centerx,
-                Gun.forma.centery,
-                Gun.angle,
-                flip= Gun.giro_izquierda
-            )
-            sound_shoot.play()
-            balas.append(bullet)
+            if not (victoria or derrota):
+                bullet = Bullet(
+                    Gun.forma.centerx,
+                    Gun.forma.centery,
+                    Gun.angle,
+                    flip= Gun.giro_izquierda
+                )
+                sound_shoot.play()
+                balas.append(bullet)
 
     pygame.display.update()                   
 

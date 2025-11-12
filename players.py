@@ -47,12 +47,16 @@ class Player:
 
         #Mover en x
         self.rect.x += delta_x
-        if mapa.verificar_colision(self.rect):
+        if (mapa.verificar_colision(self.rect) or
+            self.rect.left < 0 or
+            self.rect.right > ks.WIDTH_WINDOW):
             self.rect.x = original_x
 
         #Mover en y
         self.rect.y += delta_y
-        if mapa.verificar_colision(self.rect):
+        if (mapa.verificar_colision(self.rect) or
+            self.rect.top < 0 or
+            self.rect.bottom > ks.HIGH_WINDOW):
             self.rect.y = original_y
 
         # Solo animar si se mueve
